@@ -162,6 +162,7 @@ pub use crate::buffer_::{
     RgbImage,
     Rgba32FImage,
     RgbaImage,
+    XrgbImage,
 };
 
 pub use crate::flat::FlatSamples;

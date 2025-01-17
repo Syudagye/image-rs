@@ -5,7 +5,7 @@
 use num_traits::{Bounded, Num, NumCast};
 use std::ops::AddAssign;
 
-use crate::color::{Luma, LumaA, Rgb, Rgba};
+use crate::color::{Luma, LumaA, Rgb, Rgba, Xrgb};
 use crate::ExtendedColorType;
 
 /// Types which are safe to treat as an immutable byte slice in a pixel layout
@@ -197,6 +197,13 @@ impl PixelWithColorType for Rgba<f32> {
     const COLOR_TYPE: ExtendedColorType = ExtendedColorType::Rgba32F;
 }
 
+impl PixelWithColorType for Xrgb<u8> {
+    const COLOR_TYPE: ExtendedColorType = ExtendedColorType::Xrgb8;
+}
+impl PixelWithColorType for Xrgb<u16> {
+    const COLOR_TYPE: ExtendedColorType = ExtendedColorType::Xrgb16;
+}
+
 impl PixelWithColorType for Luma<u8> {
     const COLOR_TYPE: ExtendedColorType = ExtendedColorType::L8;
 }
@@ -222,6 +229,9 @@ mod private {
     impl SealedPixelWithColorType for Rgba<u8> {}
     impl SealedPixelWithColorType for Rgba<u16> {}
     impl SealedPixelWithColorType for Rgba<f32> {}
+
+    impl SealedPixelWithColorType for Xrgb<u8> {}
+    impl SealedPixelWithColorType for Xrgb<u16> {}
 
     impl SealedPixelWithColorType for Luma<u8> {}
     impl SealedPixelWithColorType for LumaA<u8> {}

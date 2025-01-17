@@ -16,6 +16,8 @@ pub enum ColorType {
     Rgb8,
     /// Pixel is 8-bit RGB with an alpha channel
     Rgba8,
+    /// Pixel is 8-bit RGB with first channel ignored
+    Xrgb8,
 
     /// Pixel is 16-bit luminance
     L16,
@@ -25,6 +27,8 @@ pub enum ColorType {
     Rgb16,
     /// Pixel is 16-bit RGBA
     Rgba16,
+    /// Pixel is 16-bit RGB with first channel ignored
+    Xrgb16,
 
     /// Pixel is 32-bit float RGB
     Rgb32F,
@@ -40,9 +44,9 @@ impl ColorType {
             ColorType::L8 => 1,
             ColorType::L16 | ColorType::La8 => 2,
             ColorType::Rgb8 => 3,
-            ColorType::Rgba8 | ColorType::La16 => 4,
+            ColorType::Rgba8 | ColorType::Xrgb8 | ColorType::La16 => 4,
             ColorType::Rgb16 => 6,
-            ColorType::Rgba16 => 8,
+            ColorType::Rgba16 | ColorType::Xrgb16 => 8,
             ColorType::Rgb32F => 3 * 4,
             ColorType::Rgba32F => 4 * 4,
         }
@@ -53,7 +57,7 @@ impl ColorType {
     pub fn has_alpha(self) -> bool {
         use ColorType::*;
         match self {
-            L8 | L16 | Rgb8 | Rgb16 | Rgb32F => false,
+            L8 | L16 | Rgb8 | Rgb16 | Rgb32F | Xrgb8 | Xrgb16 => false,
             La8 | Rgba8 | La16 | Rgba16 | Rgba32F => true,
         }
     }
@@ -64,7 +68,7 @@ impl ColorType {
         use ColorType::*;
         match self {
             L8 | L16 | La8 | La16 => false,
-            Rgb8 | Rgb16 | Rgba8 | Rgba16 | Rgb32F | Rgba32F => true,
+            Rgb8 | Rgb16 | Rgba8 | Rgba16 | Rgb32F | Rgba32F | Xrgb8 | Xrgb16 => true,
         }
     }
 
@@ -140,6 +144,10 @@ pub enum ExtendedColorType {
     Bgr8,
     /// Pixel is 8-bit BGR with an alpha channel
     Bgra8,
+    /// Pixel is 8-bit RGB with first channel ignored
+    Xrgb8,
+    /// Pixel is 16-bit RGB with first channel ignored
+    Xrgb16,
 
     // TODO f16 types?
     /// Pixel is 32-bit float RGB
@@ -190,7 +198,9 @@ impl ExtendedColorType {
             | ExtendedColorType::Rgba16
             | ExtendedColorType::Rgba32F
             | ExtendedColorType::Bgra8
-            | ExtendedColorType::Cmyk8 => 4,
+            | ExtendedColorType::Cmyk8
+            | ExtendedColorType::Xrgb8
+            | ExtendedColorType::Xrgb16 => 4,
         }
     }
 
@@ -215,10 +225,12 @@ impl ExtendedColorType {
             ExtendedColorType::La8 => 16,
             ExtendedColorType::Rgb8 => 24,
             ExtendedColorType::Rgba8 => 32,
+            ExtendedColorType::Xrgb8 => 32,
             ExtendedColorType::L16 => 16,
             ExtendedColorType::La16 => 32,
             ExtendedColorType::Rgb16 => 48,
             ExtendedColorType::Rgba16 => 64,
+            ExtendedColorType::Xrgb16 => 64,
             ExtendedColorType::Rgb32F => 96,
             ExtendedColorType::Rgba32F => 128,
             ExtendedColorType::Bgr8 => 24,
@@ -242,10 +254,12 @@ impl From<ColorType> for ExtendedColorType {
             ColorType::La8 => ExtendedColorType::La8,
             ColorType::Rgb8 => ExtendedColorType::Rgb8,
             ColorType::Rgba8 => ExtendedColorType::Rgba8,
+            ColorType::Xrgb8 => ExtendedColorType::Xrgb8,
             ColorType::L16 => ExtendedColorType::L16,
             ColorType::La16 => ExtendedColorType::La16,
             ColorType::Rgb16 => ExtendedColorType::Rgb16,
             ColorType::Rgba16 => ExtendedColorType::Rgba16,
+            ColorType::Xrgb16 => ExtendedColorType::Xrgb16,
             ColorType::Rgb32F => ExtendedColorType::Rgb32F,
             ColorType::Rgba32F => ExtendedColorType::Rgba32F,
         }
@@ -418,6 +432,8 @@ define_colors! {
     pub struct Rgba<T: Primitive Enlargeable>([T; 4, 1]) = "RGBA";
     /// Grayscale colors + alpha channel
     pub struct LumaA<T: Primitive>([T; 2, 1]) = "YA";
+    /// XRGB colors.
+    pub struct Xrgb<T: Primitive Enlargeable>([T; 4, 0]) = "XRGB";
 }
 
 /// Convert from one pixel component type to another. For example, convert from `u8` to `f32` pixel values.
@@ -583,6 +599,18 @@ where
     }
 }
 
+impl<S: Primitive + Enlargeable, T: Primitive> FromColor<Xrgb<S>> for Luma<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Xrgb<S>) {
+        let gray = self.channels_mut();
+        let rgb = other.channels();
+        let l = rgb_to_luma(&rgb[1..]);
+        gray[0] = T::from_primitive(l);
+    }
+}
+
 // `FromColor` for LumaA
 
 impl<S: Primitive, T: Primitive> FromColor<LumaA<S>> for LumaA<T>
@@ -618,6 +646,18 @@ where
         let rgba = other.channels();
         gray_a[0] = T::from_primitive(rgb_to_luma(rgba));
         gray_a[1] = T::from_primitive(rgba[3]);
+    }
+}
+
+impl<S: Primitive + Enlargeable, T: Primitive> FromColor<Xrgb<S>> for LumaA<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Xrgb<S>) {
+        let gray_a = self.channels_mut();
+        let xrgb = other.channels();
+        gray_a[0] = T::from_primitive(rgb_to_luma(&xrgb[1..]));
+        gray_a[1] = T::DEFAULT_MAX_VALUE;
     }
 }
 
@@ -658,6 +698,20 @@ where
         rgba[0] = T::from_primitive(rgb[0]);
         rgba[1] = T::from_primitive(rgb[1]);
         rgba[2] = T::from_primitive(rgb[2]);
+        rgba[3] = T::DEFAULT_MAX_VALUE;
+    }
+}
+
+impl<S: Primitive, T: Primitive> FromColor<Xrgb<S>> for Rgba<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Xrgb<S>) {
+        let rgba = &mut self.0;
+        let xrgb = &other.0;
+        rgba[0] = T::from_primitive(xrgb[1]);
+        rgba[1] = T::from_primitive(xrgb[2]);
+        rgba[2] = T::from_primitive(xrgb[3]);
         rgba[3] = T::DEFAULT_MAX_VALUE;
     }
 }
@@ -718,6 +772,19 @@ where
     }
 }
 
+impl<S: Primitive, T: Primitive> FromColor<Xrgb<S>> for Rgb<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Xrgb<S>) {
+        let rgb = &mut self.0;
+        let xrgb = &other.0;
+        rgb[0] = T::from_primitive(xrgb[1]);
+        rgb[1] = T::from_primitive(xrgb[2]);
+        rgb[2] = T::from_primitive(xrgb[3]);
+    }
+}
+
 impl<S: Primitive, T: Primitive> FromColor<LumaA<S>> for Rgb<T>
 where
     T: FromPrimitive<S>,
@@ -741,6 +808,60 @@ where
         rgb[0] = T::from_primitive(gray);
         rgb[1] = T::from_primitive(gray);
         rgb[2] = T::from_primitive(gray);
+    }
+}
+
+// `FromColor` for XRGB
+
+impl<S: Primitive, T: Primitive> FromColor<Rgb<S>> for Xrgb<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Rgb<S>) {
+        let own = &mut self.0;
+        let other = &other.0;
+        own[1] = T::from_primitive(other[0]);
+        own[2] = T::from_primitive(other[1]);
+        own[3] = T::from_primitive(other[2]);
+    }
+}
+
+impl<S: Primitive, T: Primitive> FromColor<Rgba<S>> for Xrgb<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Rgba<S>) {
+        let rgb = &mut self.0;
+        let rgba = &other.0;
+        rgb[1] = T::from_primitive(rgba[0]);
+        rgb[2] = T::from_primitive(rgba[1]);
+        rgb[3] = T::from_primitive(rgba[2]);
+    }
+}
+
+impl<S: Primitive, T: Primitive> FromColor<LumaA<S>> for Xrgb<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &LumaA<S>) {
+        let rgb = &mut self.0;
+        let gray = other.0[0];
+        rgb[1] = T::from_primitive(gray);
+        rgb[2] = T::from_primitive(gray);
+        rgb[3] = T::from_primitive(gray);
+    }
+}
+
+impl<S: Primitive, T: Primitive> FromColor<Luma<S>> for Xrgb<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Luma<S>) {
+        let rgb = &mut self.0;
+        let gray = other.0[0];
+        rgb[1] = T::from_primitive(gray);
+        rgb[2] = T::from_primitive(gray);
+        rgb[3] = T::from_primitive(gray);
     }
 }
 
@@ -859,6 +980,12 @@ impl<T: Primitive> Blend for Rgb<T> {
     }
 }
 
+impl<T: Primitive> Blend for Xrgb<T> {
+    fn blend(&mut self, other: &Xrgb<T>) {
+        *self = *other;
+    }
+}
+
 /// Invert a color
 pub(crate) trait Invert {
     /// Inverts a color in-place.
@@ -906,6 +1033,20 @@ impl<T: Primitive> Invert for Rgb<T> {
         let b1 = max - rgb[2];
 
         *self = Rgb([r1, g1, b1]);
+    }
+}
+
+impl<T: Primitive> Invert for Xrgb<T> {
+    fn invert(&mut self) {
+        let rgb = self.0;
+
+        let max = T::DEFAULT_MAX_VALUE;
+
+        let r1 = max - rgb[1];
+        let g1 = max - rgb[2];
+        let b1 = max - rgb[3];
+
+        *self = Xrgb([rgb[0], r1, g1, b1]);
     }
 }
 

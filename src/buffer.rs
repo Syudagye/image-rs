@@ -6,7 +6,7 @@ use std::ops::{Deref, DerefMut, Index, IndexMut, Range};
 use std::path::Path;
 use std::slice::{ChunksExact, ChunksExactMut};
 
-use crate::color::{FromColor, Luma, LumaA, Rgb, Rgba};
+use crate::color::{FromColor, Luma, LumaA, Rgb, Rgba, Xrgb};
 use crate::dynimage::{save_buffer, save_buffer_with_format, write_buffer_with_format};
 use crate::error::ImageResult;
 use crate::flat::{FlatSamples, SampleLayout};
@@ -1411,6 +1411,8 @@ where
 pub type RgbImage = ImageBuffer<Rgb<u8>, Vec<u8>>;
 /// Sendable Rgb + alpha channel image buffer
 pub type RgbaImage = ImageBuffer<Rgba<u8>, Vec<u8>>;
+/// Sendable Xrgb channel image buffer
+pub type XrgbImage = ImageBuffer<Xrgb<u8>, Vec<u8>>;
 /// Sendable grayscale image buffer
 pub type GrayImage = ImageBuffer<Luma<u8>, Vec<u8>>;
 /// Sendable grayscale + alpha channel image buffer
@@ -1419,6 +1421,8 @@ pub type GrayAlphaImage = ImageBuffer<LumaA<u8>, Vec<u8>>;
 pub(crate) type Rgb16Image = ImageBuffer<Rgb<u16>, Vec<u16>>;
 /// Sendable 16-bit Rgb + alpha channel image buffer
 pub(crate) type Rgba16Image = ImageBuffer<Rgba<u16>, Vec<u16>>;
+/// Sendable 16-bit Rgb + alpha channel image buffer
+pub(crate) type Xrgb16Image = ImageBuffer<Xrgb<u16>, Vec<u16>>;
 /// Sendable 16-bit grayscale image buffer
 pub(crate) type Gray16Image = ImageBuffer<Luma<u16>, Vec<u16>>;
 /// Sendable 16-bit grayscale + alpha channel image buffer
