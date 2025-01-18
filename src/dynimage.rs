@@ -283,6 +283,18 @@ impl DynamicImage {
         dynamic_map!(*self, ref p, p.convert())
     }
 
+    /// Returns a copy of this image as an XGBA image.
+    #[must_use]
+    pub fn to_xrgb8(&self) -> XrgbImage {
+        dynamic_map!(*self, ref p, p.convert())
+    }
+
+    /// Returns a copy of this image as an XGBA image.
+    #[must_use]
+    pub fn to_xrgb16(&self) -> Xrgb16Image {
+        dynamic_map!(*self, ref p, p.convert())
+    }
+
     /// Returns a copy of this image as a Luma image.
     #[must_use]
     pub fn to_luma8(&self) -> GrayImage {

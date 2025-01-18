@@ -813,6 +813,19 @@ where
 
 // `FromColor` for XRGB
 
+impl<S: Primitive, T: Primitive> FromColor<Xrgb<S>> for Xrgb<T>
+where
+    T: FromPrimitive<S>,
+{
+    fn from_color(&mut self, other: &Xrgb<S>) {
+        let own = &mut self.0;
+        let other = &other.0;
+        own[1] = T::from_primitive(other[1]);
+        own[2] = T::from_primitive(other[2]);
+        own[3] = T::from_primitive(other[3]);
+    }
+}
+
 impl<S: Primitive, T: Primitive> FromColor<Rgb<S>> for Xrgb<T>
 where
     T: FromPrimitive<S>,
